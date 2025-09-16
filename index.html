@@ -68,8 +68,6 @@
       font-size: 18px;
     }
     .btn-pronto { background: #8b5cf6; color: #fff; }
-    .btn-entregue { background: #16a34a; color: #fff; }
-    .btn-cancelar { background: #dc2626; color: #fff; }
 
     /* Painel lateral */
     .sidebar {
@@ -81,7 +79,7 @@
       border-left: 4px solid #2563eb;
     }
     .sidebar.open {
-      width: 40%; /* ocupa 40% da tela */
+      width: 40%;
       padding: 20px;
     }
     .sidebar h2 { margin-top: 0; }
@@ -123,8 +121,14 @@
 
     // Simulação Planilha Google
     const fichaTecnica = {
-      "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/a/a3/Eq_it-na_pizza-margherita_sep2005_sml.jpg", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
-      "P002": { foto: "https://upload.wikimedia.org/wikipedia/commons/a/a3/Eq_it-na_pizza-margherita_sep2005_sml.jpg", ingredientes: "Massa, Molho, Calabresa, Queijo", preparo: "Assar por 15 min.", tempo: "15 min" }
+      "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Hamburger_garnished_with_salad.png", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
+       "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Hamburger_garnished_with_salad.png", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
+       "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Hamburger_garnished_with_salad.png", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
+       "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Hamburger_garnished_with_salad.png", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
+       "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Hamburger_garnished_with_salad.png", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
+       "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Hamburger_garnished_with_salad.png", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
+       "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Hamburger_garnished_with_salad.png", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
+ "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Hamburger_garnished_with_salad.png", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
     };
 
     const container = document.getElementById("pedidos");
@@ -134,7 +138,7 @@
 
     function renderPedidos() {
       container.innerHTML = "";
-      pedidos.filter(p => p.status !== "cancelado").forEach(p => {
+      pedidos.filter(p => p.status !== "cancelado" && p.status !== "pronto").forEach(p => {
         const tempoPassado = Math.floor((Date.now() - p.inicio) / 1000);
         const restante = p.tempo - tempoPassado;
         let classe = "normal";
@@ -150,15 +154,11 @@
           <div class="time ${classe}">${restante > 0 ? formatTime(restante) : "🚨 ATRASADO!"}</div>
           <div class="actions">
             <button class="btn-pronto">PRONTO</button>
-            <button class="btn-entregue">ENTREGUE</button>
-            <button class="btn-cancelar">CANCELAR</button>
           </div>
         `;
         card.onclick = () => abrirSidebar(p);
-        const [btnPronto, btnEntregue, btnCancelar] = card.querySelectorAll("button");
+        const btnPronto = card.querySelector(".btn-pronto");
         btnPronto.onclick = e => { e.stopPropagation(); p.status="pronto"; renderPedidos(); };
-        btnEntregue.onclick = e => { e.stopPropagation(); p.status="entregue"; renderPedidos(); };
-        btnCancelar.onclick = e => { e.stopPropagation(); p.status="cancelado"; renderPedidos(); };
         container.appendChild(card);
       });
     }
