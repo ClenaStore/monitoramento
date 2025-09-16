@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Monitor de Produção</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Estilo -->
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f4f6f9;
+    }
+    header {
+      background: #2563eb; color: #fff; padding: 15px;
+      font-size: 20px; font-weight: bold;
+    }
+    .container {
+      display: flex; flex-wrap: wrap;
+      gap: 15px; padding: 20px;
+    }
+    .card {
+      background: #fff; border-radius: 10px;
+      padding: 15px; width: 300px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.1);
+      position: relative;
+    }
+    .card img {
+      width: 100%; border-radius: 8px; margin-bottom: 10px;
+    }
+    .title { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
+    .obs { font-size: 14px; color: #555; margin-bottom: 10px; }
+    .time {
+      font-size: 16px; font-weight: bold;
+      padding: 6px 10px; border-radius: 6px;
+      display: inline-block; margin-bottom: 10px;
+    }
+    .time.normal { background: #e0f7e9; color: #16a34a; }
+    .time.alert { background: #fde68a; color: #92400e; }
+    .time.late { background: #fecaca; color: #b91c1c; animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity: 0.5; } }
+
+    .actions {
+      display: flex; gap: 10px;
+    }
+    button {
+      flex: 1; padding: 10px;
+      border: none; border-radius: 6px;
+      font-weight: bold; cursor: pointer;
+    }
+    .btn-pronto { background: #8b5cf6; color: #fff; }
+    .btn-entregue { background: #16a34a; color: #fff; }
+    .btn-cancelar { background: #dc2626; color: #fff; }
+    .popup {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,.6); display: none;
+      justify-content: center; align-items: center;
+    }
+    .popup-content {
+      background: #fff; padding: 20px;
+      border-radius: 12px; max-width: 500px;
+      max-height: 80vh; overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <header>📊 Monitor de Produção</header>
+
+  <div class="container" id="pedidos"></div>
+
+  <!-- Popup detalhes -->
+  <div class="popup" id="popup">
+    <div class="popup-content" id="popupContent"></div>
+  </div>
+
+  <audio id="alertSound">
+    <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+  </audio>
+
+  <script>
+    // 🔗 Simulação: pedidos vindos do Easy Assist
+    const pedidos = [
+      { id: 1, mesa: "Mesa 1", codigo: "P001", nome: "Duplo Burger", obs: "Sem cebola", tempo: 600, inicio: Date.now(), status: "andamento" },
+      { id: 2, mesa: "Mesa 2", codigo: "P002", nome: "Pizza Calabresa G", obs: "Borda catupiry", tempo: 900, inicio: Date.now(), status: "andamento" }
+    ];
+
+    // 🔗 Simulação: planilha Google
+    const fichaTecnica = {
+      "P001": { foto: "https://via.placeholder.com/300x200.png?text=Duplo+Burger", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
+      "P002": { foto: "https://via.placeholder.com/300x200.png?text=Pizza+Calabresa", ingredientes: "Massa, Molho, Calabresa, Queijo", preparo: "Assar por 15 min.", tempo: "15 min" }
+    };
+
+    const container = document.getElementById("pedidos");
+    const popup = document.getElementById("popup");
+    const popupContent = document.getElementById("popupContent");
+    const alertSound = document.getElementById("alertSound");
+
+    function renderPedidos() {
+      container.innerHTML = "";
+      pedidos.filter(p => p.status !== "cancelado").forEach(p => {
+        const tempoPassado = Math.floor((Date.now() - p.inicio) / 1000);
+        const restante = p.tempo - tempoPassado;
+        let classe = "normal";
+        if (restante <= 0) { classe = "late"; alertSound.play(); }
+        else if (restante < 60) { classe = "alert"; }
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <img src="${fichaTecnica[p.codigo]?.foto || ''}">
+          <div class="title">${p.nome}</div>
+          <div class="obs">${p.obs || ''}</div>
+          <div class="time ${classe}">${restante > 0 ? formatTime(restante) : "ATRASADO!"}</div>
+          <div class="actions">
+            <button class="btn-pronto">PRONTO</button>
+            <button class="btn-entregue">ENTREGUE</button>
+            <button class="btn-cancelar">CANCELAR</button>
+          </div>
+        `;
+        card.onclick = () => abrirPopup(p);
+        const [btnPronto, btnEntregue, btnCancelar] = card.querySelectorAll("button");
+        btnPronto.onclick = e => { e.stopPropagation(); p.status="pronto"; renderPedidos(); };
+        btnEntregue.onclick = e => { e.stopPropagation(); p.status="entregue"; renderPedidos(); };
+        btnCancelar.onclick = e => { e.stopPropagation(); p.status="cancelado"; renderPedidos(); };
+        container.appendChild(card);
+      });
+    }
+
+    function abrirPopup(p) {
+      const f = fichaTecnica[p.codigo];
+      popupContent.innerHTML = `
+        <h2>${p.nome}</h2>
+        <img src="${f.foto}" style="width:100%;border-radius:8px;">
+        <p><b>Ingredientes:</b> ${f.ingredientes}</p>
+        <p><b>Modo de Preparo:</b> ${f.preparo}</p>
+        <p><b>Tempo de Preparo:</b> ${f.tempo}</p>
+      `;
+      popup.style.display = "flex";
+      setTimeout(() => popup.style.display="none", 300000); // Fecha em 5 min
+    }
+
+    popup.onclick = () => popup.style.display = "none";
+
+    function formatTime(sec) {
+      const m = Math.floor(sec/60), s = sec%60;
+      return `${m}m ${s}s`;
+    }
+
+    setInterval(renderPedidos, 1000);
+  </script>
+</body>
+</html>
