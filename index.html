@@ -5,52 +5,49 @@
   <title>Monitor de Produção</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Estilo -->
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 0; padding: 0;
-      background: #0b1020; /* fundo escuro para TV */
+      background: #0b1020;
       color: #fff;
       height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
     header {
       background: #2563eb;
-      display: flex; align-items: center; justify-content: flex-start;
+      display: flex; align-items: center;
       padding: 10px 20px;
       font-size: 26px; font-weight: bold;
     }
-    header img {
-      height: 50px; margin-right: 15px;
+    header img { height: 50px; margin-right: 15px; }
+
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
     }
     .container {
       flex: 1;
       display: flex; flex-wrap: wrap;
       gap: 20px; padding: 20px;
       overflow-y: auto;
-      justify-content: center;
-      align-items: flex-start;
+      align-content: flex-start;
     }
     .card {
-      background: #fff;
-      color: #000;
+      background: #fff; color: #000;
       border-radius: 16px;
       padding: 20px;
-      width: 380px; /* maior para TV */
+      width: 340px;
       box-shadow: 0 6px 16px rgba(0,0,0,.3);
-      position: relative;
       font-size: 22px;
       cursor: pointer;
       transition: transform .2s;
     }
-    .card:hover {
-      transform: scale(1.05);
-    }
-    .card img {
-      width: 100%; border-radius: 12px; margin-bottom: 15px;
-    }
+    .card:hover { transform: scale(1.05); }
+    .card img { width: 100%; border-radius: 12px; margin-bottom: 15px; }
     .title { font-weight: bold; font-size: 26px; margin-bottom: 8px; }
     .obs { font-size: 20px; color: #444; margin-bottom: 15px; }
     .time {
@@ -63,9 +60,7 @@
     .time.late { background: #fecaca; color: #b91c1c; animation: blink 1s infinite; }
     @keyframes blink { 50% { opacity: 0.5; } }
 
-    .actions {
-      display: flex; gap: 12px;
-    }
+    .actions { display: flex; gap: 12px; }
     button {
       flex: 1; padding: 14px;
       border: none; border-radius: 8px;
@@ -75,22 +70,29 @@
     .btn-pronto { background: #8b5cf6; color: #fff; }
     .btn-entregue { background: #16a34a; color: #fff; }
     .btn-cancelar { background: #dc2626; color: #fff; }
-    .popup {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,.6); display: none;
-      justify-content: center; align-items: center;
-      z-index: 1000;
-    }
-    .popup-content {
+
+    /* Painel lateral */
+    .sidebar {
+      width: 0;
       background: #fff; color: #000;
-      padding: 30px;
-      border-radius: 16px;
-      max-width: 600px;
-      max-height: 85vh; overflow-y: auto;
-      font-size: 20px;
+      overflow-x: hidden;
+      transition: 0.4s;
+      padding: 0;
+      border-left: 4px solid #2563eb;
     }
-    .popup-content img {
+    .sidebar.open {
+      width: 40%; /* ocupa 40% da tela */
+      padding: 20px;
+    }
+    .sidebar h2 { margin-top: 0; }
+    .sidebar img {
       width: 100%; border-radius: 12px; margin-bottom: 15px;
+    }
+    .close-btn {
+      background: #dc2626; color: #fff;
+      border: none; padding: 10px 15px;
+      font-size: 16px; border-radius: 6px;
+      cursor: pointer; margin-bottom: 15px;
     }
   </style>
 </head>
@@ -100,11 +102,12 @@
     📊 Monitor de Produção
   </header>
 
-  <div class="container" id="pedidos"></div>
-
-  <!-- Popup detalhes -->
-  <div class="popup" id="popup">
-    <div class="popup-content" id="popupContent"></div>
+  <div class="main">
+    <div class="container" id="pedidos"></div>
+    <div class="sidebar" id="sidebar">
+      <button class="close-btn" onclick="fecharSidebar()">Fechar</button>
+      <div id="sidebarContent"></div>
+    </div>
   </div>
 
   <audio id="alertSound">
@@ -112,21 +115,21 @@
   </audio>
 
   <script>
-    // 🔗 Simulação: pedidos vindos do Easy Assist
+    // Simulação Easy Assist
     const pedidos = [
       { id: 1, mesa: "Mesa 1", codigo: "P001", nome: "Duplo Burger", obs: "Sem cebola", tempo: 600, inicio: Date.now(), status: "andamento" },
       { id: 2, mesa: "Mesa 2", codigo: "P002", nome: "Pizza Calabresa G", obs: "Borda catupiry", tempo: 900, inicio: Date.now(), status: "andamento" }
     ];
 
-    // 🔗 Simulação: planilha Google
+    // Simulação Planilha Google
     const fichaTecnica = {
-      "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/6/6b/Hamburger_garnished_with_salad.png", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
+      "P001": { foto: "https://upload.wikimedia.org/wikipedia/commons/a/a3/Eq_it-na_pizza-margherita_sep2005_sml.jpg", ingredientes: "Pão, Carne, Queijo, Molho", preparo: "Grelhar carne e montar.", tempo: "10 min" },
       "P002": { foto: "https://upload.wikimedia.org/wikipedia/commons/a/a3/Eq_it-na_pizza-margherita_sep2005_sml.jpg", ingredientes: "Massa, Molho, Calabresa, Queijo", preparo: "Assar por 15 min.", tempo: "15 min" }
     };
 
     const container = document.getElementById("pedidos");
-    const popup = document.getElementById("popup");
-    const popupContent = document.getElementById("popupContent");
+    const sidebar = document.getElementById("sidebar");
+    const sidebarContent = document.getElementById("sidebarContent");
     const alertSound = document.getElementById("alertSound");
 
     function renderPedidos() {
@@ -151,7 +154,7 @@
             <button class="btn-cancelar">CANCELAR</button>
           </div>
         `;
-        card.onclick = () => abrirPopup(p);
+        card.onclick = () => abrirSidebar(p);
         const [btnPronto, btnEntregue, btnCancelar] = card.querySelectorAll("button");
         btnPronto.onclick = e => { e.stopPropagation(); p.status="pronto"; renderPedidos(); };
         btnEntregue.onclick = e => { e.stopPropagation(); p.status="entregue"; renderPedidos(); };
@@ -160,20 +163,22 @@
       });
     }
 
-    function abrirPopup(p) {
+    function abrirSidebar(p) {
       const f = fichaTecnica[p.codigo];
-      popupContent.innerHTML = `
+      sidebarContent.innerHTML = `
         <h2>${p.nome} - ${p.mesa}</h2>
         <img src="${f.foto}">
         <p><b>Ingredientes:</b> ${f.ingredientes}</p>
         <p><b>Modo de Preparo:</b> ${f.preparo}</p>
         <p><b>Tempo de Preparo:</b> ${f.tempo}</p>
       `;
-      popup.style.display = "flex";
-      setTimeout(() => popup.style.display="none", 300000); // Fecha em 5 min
+      sidebar.classList.add("open");
+      setTimeout(fecharSidebar, 300000); // Fecha em 5 min
     }
 
-    popup.onclick = () => popup.style.display = "none";
+    function fecharSidebar() {
+      sidebar.classList.remove("open");
+    }
 
     function formatTime(sec) {
       const m = Math.floor(sec/60), s = sec%60;
